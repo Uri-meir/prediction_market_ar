@@ -1,0 +1,85 @@
+================================================================================
+POLYMARKET-KALSHI ARBITRAGE DETECTION SYSTEM
+================================================================================
+
+✅ COMPLETE & READY TO USE!
+
+This system will email you when it finds arbitrage opportunities with 
+at least $100 guaranteed profit.
+
+================================================================================
+QUICK START (5 MINUTES)
+================================================================================
+
+1. Open and read: GET_STARTED.md
+   → This has EVERYTHING you need, step-by-step
+
+2. Install dependencies:
+   pip install -r requirements.txt
+
+3. Create .env file with your:
+   - Kalshi credentials
+   - Gmail credentials
+   (See GET_STARTED.md for template)
+
+4. Test:
+   python3 main.py --mode once
+
+5. Run continuously:
+   python3 main.py --mode scheduled
+
+================================================================================
+DOCUMENTATION GUIDE
+================================================================================
+
+📖 GET_STARTED.md       ⭐ START HERE - Complete setup walkthrough
+📖 QUICKSTART.md           5-minute quick version
+📖 PROJECT_SUMMARY.md      What you have & how it works
+📖 README.md               Full technical documentation
+📖 SETUP.md                Detailed configuration help
+📖 SAMPLE_OUTPUT.md        Example alerts & outputs
+
+================================================================================
+PROJECT FILES
+================================================================================
+
+Core Application:
+  main.py                  ⭐ Main entry point - run this!
+  config.py                Configuration management
+  polymarket_client.py     Polymarket API
+  kalshi_client.py         Kalshi API
+  market_matcher.py        Matching algorithm
+  arbitrage_calculator.py  Arbitrage detection
+  alerting.py              Email alerts
+
+Tests:
+  tests/test_*.py          Unit tests
+  example_usage.py         Usage examples
+
+================================================================================
+WHAT THIS DOES
+================================================================================
+
+1. Scans Polymarket & Kalshi every 5 minutes
+2. Finds matching markets (fuzzy matching)
+3. Detects arbitrage opportunities (guaranteed profit both outcomes)
+4. Emails you when profit >= $100
+5. Tells you exactly how much to bet on each platform
+
+================================================================================
+WHAT YOU NEED
+================================================================================
+
+✓ Python 3.9+
+✓ Kalshi account (https://kalshi.com)
+✓ Gmail account for alerts
+✓ 5 minutes to configure
+
+================================================================================
+NEXT STEP
+================================================================================
+
+📖 Open GET_STARTED.md and follow the instructions!
+
+================================================================================
+
