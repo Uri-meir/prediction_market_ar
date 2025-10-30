@@ -71,6 +71,15 @@ class PolymarketClient:
                     break
                 
                 for item in batch:
+                    # Skip archived, restricted, or explicitly closed markets
+                    # Only include active=true markets that are not closed
+                    if item.get("archived", False):
+                        continue
+                    if item.get("closed", False):
+                        continue
+                    if not item.get("active", False):
+                        continue
+                    
                     market = self._parse_market(item)
                     if market and self._is_binary_market(item):
                         markets.append(market)
@@ -93,9 +102,23 @@ class PolymarketClient:
     
     def _is_binary_market(self, market_data: Dict[str, Any]) -> bool:
         """Check if a market is binary (exactly 2 outcomes)."""
+        import json
+        
         # Polymarket binary markets typically have 2 outcomes or tokens
+        # Note: outcomes can be a JSON string or an array
         outcomes = market_data.get("outcomes", [])
+        if isinstance(outcomes, str):
+            try:
+                outcomes = json.loads(outcomes)
+            except:
+                outcomes = []
+        
         tokens = market_data.get("tokens", [])
+        if isinstance(tokens, str):
+            try:
+                tokens = json.loads(tokens)
+            except:
+                tokens = []
         
         return len(outcomes) == 2 or len(tokens) == 2
     
@@ -106,17 +129,35 @@ class PolymarketClient:
         Polymarket prices are in the range [0, 1] representing probabilities.
         """
         try:
-            market_id = data.get("condition_id") or data.get("id") or str(data.get("slug", ""))
+            import json
+            
+            market_id = data.get("condition_id") or data.get("conditionId") or data.get("id") or str(data.get("slug", ""))
             question = data.get("question") or data.get("title", "")
             description = data.get("description", "")
             
             # Extract prices - Polymarket uses 0-1 probability format
             # For binary markets, we need YES and NO prices
             outcomes = data.get("outcomes", [])
+            if isinstance(outcomes, str):
+                try:
+                    outcomes = json.loads(outcomes)
+                except:
+                    outcomes = []
+            
             tokens = data.get("tokens", [])
+            if isinstance(tokens, str):
+                try:
+                    tokens = json.loads(tokens)
+                except:
+                    tokens = []
             
             # Try to get prices from outcomePrices or tokens
             outcome_prices = data.get("outcomePrices") or data.get("outcome_prices", [])
+            if isinstance(outcome_prices, str):
+                try:
+                    outcome_prices = json.loads(outcome_prices)
+                except:
+                    outcome_prices = []
             
             yes_price = None
             no_price = None
