@@ -1,0 +1,33 @@
+Version 1.0 - Working Release
+
+Status: Production Ready
+
+✅ Polymarket Integration - WORKING
+   - Fetches 200+ binary markets
+   - Real-time price data
+   - JSON parsing fixed
+   
+⏳ Kalshi Integration - PENDING ACCOUNT APPROVAL
+   - Code ready and tested
+   - Waiting for account verification
+   
+✅ Email Alerts - WORKING
+   - Gmail SMTP configured
+   - HTML formatted alerts
+   - Test email successful
+   
+✅ Core Features - COMPLETE
+   - Fuzzy market matching
+   - Arbitrage calculation with fees
+   - Optimal bet distribution
+   - $100 minimum profit threshold
+   - Scheduled scanning (5 min intervals)
+   
+📅 Released: October 30, 2025
+🔗 Repository: https://github.com/Uri-meir/prediction_market_ar
+
+Next Steps:
+- Wait for Kalshi account approval
+- Run in scheduled mode when both platforms ready
+- Monitor for $100+ arbitrage opportunities
+
