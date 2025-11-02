@@ -12,7 +12,7 @@ import schedule
 from config import Config
 from models import ArbitrageOpportunity
 from polymarket_client import PolymarketClient
-from kalshi_client import KalshiClient
+from predictit_client import PredictItClient
 from market_matcher import MarketMatcher
 from arbitrage_calculator import ArbitrageCalculator
 from alerting import AlertManager
@@ -34,7 +34,7 @@ class ArbitrageScanner:
     
     def __init__(self):
         self.polymarket_client = PolymarketClient()
-        self.kalshi_client = KalshiClient()
+        self.predictit_client = PredictItClient()
         self.matcher = MarketMatcher()
         self.calculator = ArbitrageCalculator()
         self.alert_manager = AlertManager()
@@ -58,26 +58,26 @@ class ArbitrageScanner:
             poly_markets = self.polymarket_client.fetch_markets(limit=200)
             logger.info(f"  Found {len(poly_markets)} binary markets")
             
-            logger.info("Fetching markets from Kalshi...")
-            kalshi_markets = self.kalshi_client.fetch_markets(limit=200)
-            logger.info(f"  Found {len(kalshi_markets)} binary markets")
+            logger.info("Fetching markets from PredictIt...")
+            predictit_markets = self.predictit_client.fetch_markets(limit=200)
+            logger.info(f"  Found {len(predictit_markets)} binary markets")
             
-            if not poly_markets or not kalshi_markets:
+            if not poly_markets or not predictit_markets:
                 logger.warning("No markets found on one or both platforms")
                 return []
             
             # Step 2: Match similar markets
             logger.info("Matching markets between platforms...")
-            matches = self.matcher.find_matches(poly_markets, kalshi_markets)
+            matches = self.matcher.find_matches(poly_markets, predictit_markets)
             logger.info(f"  Found {len(matches)} matching market pairs")
             
             # Step 3: Check for arbitrage opportunities
             logger.info("Analyzing matches for arbitrage opportunities...")
             opportunities = []
             
-            for poly_market, kalshi_market, match_score in matches:
+            for poly_market, predictit_market, match_score in matches:
                 opportunity = self.calculator.check_arbitrage(
-                    poly_market, kalshi_market, match_score
+                    poly_market, predictit_market, match_score
                 )
                 
                 if opportunity:

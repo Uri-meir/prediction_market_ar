@@ -57,11 +57,11 @@ class ArbitrageOpportunity:
             "match_score": round(self.match_score, 2),
             "polymarket_yes_prob": round(self.polymarket_market.yes_price, 4),
             "polymarket_no_prob": round(self.polymarket_market.no_price, 4),
-            "kalshi_yes_prob": round(self.kalshi_market.yes_price / 100, 4),
-            "kalshi_no_prob": round(self.kalshi_market.no_price / 100, 4),
+            "platform2_yes_prob": round(self.kalshi_market.yes_price, 4),
+            "platform2_no_prob": round(self.kalshi_market.no_price, 4),
             "recommendation": (
                 f"Bet ${self.bet_polymarket_amount:.2f} on {self.bet_polymarket_side.upper()} (Polymarket), "
-                f"${self.bet_kalshi_amount:.2f} on {self.bet_kalshi_side.upper()} (Kalshi). "
+                f"${self.bet_kalshi_amount:.2f} on {self.bet_kalshi_side.upper()} ({self.kalshi_market.platform.title()}). "
                 f"Profit: ${self.profit_if_yes:.2f} if Yes, ${self.profit_if_no:.2f} if No."
             ),
             "total_investment": round(self.total_investment, 2),
@@ -69,19 +69,21 @@ class ArbitrageOpportunity:
             "roi_percent": round(self.roi_percent, 2),
             "timestamp": self.timestamp.isoformat(),
             "link_poly": self.polymarket_market.url or "N/A",
-            "link_kalshi": self.kalshi_market.url or "N/A",
+            "link_platform2": self.kalshi_market.url or "N/A",
+            "platform2": self.kalshi_market.platform,
         }
     
     def __str__(self) -> str:
+        platform2_name = self.kalshi_market.platform.title()
         return (
             f"ARBITRAGE FOUND!\n"
             f"Event: {self.polymarket_market.event_title}\n"
             f"Match Score: {self.match_score:.1f}%\n"
             f"Strategy: Bet ${self.bet_polymarket_amount:.2f} on {self.bet_polymarket_side.upper()} (Polymarket), "
-            f"${self.bet_kalshi_amount:.2f} on {self.bet_kalshi_side.upper()} (Kalshi)\n"
+            f"${self.bet_kalshi_amount:.2f} on {self.bet_kalshi_side.upper()} ({platform2_name})\n"
             f"Total Investment: ${self.total_investment:.2f}\n"
             f"Min Profit: ${self.min_profit:.2f} (ROI: {self.roi_percent:.2f}%)\n"
             f"Polymarket: {self.polymarket_market.url}\n"
-            f"Kalshi: {self.kalshi_market.url}"
+            f"{platform2_name}: {self.kalshi_market.url}"
         )
 

@@ -16,7 +16,10 @@ class Config:
     # Polymarket Configuration
     POLYMARKET_API_URL: str = os.getenv("POLYMARKET_API_URL", "https://gamma-api.polymarket.com")
     
-    # Kalshi Configuration
+    # PredictIt Configuration
+    PREDICTIT_API_URL: str = os.getenv("PREDICTIT_API_URL", "https://www.predictit.org/api/marketdata/all")
+    
+    # Kalshi Configuration (kept for backward compatibility)
     KALSHI_API_URL: str = os.getenv("KALSHI_API_URL", "https://trading-api.kalshi.com/trade-api/v2")
     KALSHI_EMAIL: Optional[str] = os.getenv("KALSHI_EMAIL")
     KALSHI_PASSWORD: Optional[str] = os.getenv("KALSHI_PASSWORD")
@@ -42,6 +45,9 @@ class Config:
     # Platform fees (as decimal, e.g., 0.02 = 2%)
     # Polymarket typically charges ~2% on profits
     POLYMARKET_FEE: float = float(os.getenv("POLYMARKET_FEE", "0.02"))
+    
+    # PredictIt charges ~10% on profits
+    PREDICTIT_FEE: float = float(os.getenv("PREDICTIT_FEE", "0.10"))
     
     # Kalshi charges ~7% on profits (varies by contract)
     KALSHI_FEE: float = float(os.getenv("KALSHI_FEE", "0.07"))

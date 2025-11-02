@@ -27,28 +27,40 @@ logger = logging.getLogger(__name__)
 class ArbitrageCalculator:
     """Calculate arbitrage opportunities between matched markets."""
     
-    def __init__(self, polymarket_fee: float = None, kalshi_fee: float = None,
+    def __init__(self, polymarket_fee: float = None, predictit_fee: float = None,
                  min_profit: float = None):
         """
         Initialize arbitrage calculator.
         
         Args:
             polymarket_fee: Fee rate for Polymarket (0.02 = 2%)
-            kalshi_fee: Fee rate for Kalshi (0.07 = 7%)
+            predictit_fee: Fee rate for PredictIt (0.10 = 10%)
             min_profit: Minimum profit required in USD
         """
         self.polymarket_fee = polymarket_fee or Config.POLYMARKET_FEE
-        self.kalshi_fee = kalshi_fee or Config.KALSHI_FEE
+        self.predictit_fee = predictit_fee or Config.PREDICTIT_FEE
         self.min_profit = min_profit or Config.MIN_PROFIT_USD
     
-    def check_arbitrage(self, poly_market: Market, kalshi_market: Market,
+    def _get_platform_fee(self, platform: str) -> float:
+        """Get fee for a platform by name."""
+        if platform == "polymarket":
+            return self.polymarket_fee
+        elif platform == "predictit":
+            return self.predictit_fee
+        elif platform == "kalshi":
+            return Config.KALSHI_FEE  # For backward compatibility
+        else:
+            logger.warning(f"Unknown platform {platform}, using 0.05 (5%) as default")
+            return 0.05
+    
+    def check_arbitrage(self, poly_market: Market, platform2_market: Market,
                        match_score: float) -> Optional[ArbitrageOpportunity]:
         """
         Check if arbitrage opportunity exists between two matched markets.
         
         Strategy: Try all 4 combinations:
-        1. YES on Polymarket, NO on Kalshi
-        2. NO on Polymarket, YES on Kalshi
+        1. YES on Polymarket, NO on Platform 2
+        2. NO on Polymarket, YES on Platform 2
         3. YES on both (shouldn't have arb)
         4. NO on both (shouldn't have arb)
         
@@ -56,18 +68,18 @@ class ArbitrageCalculator:
         """
         opportunities = []
         
-        # Strategy 1: YES on Polymarket, NO on Kalshi
+        # Strategy 1: YES on Polymarket, NO on Platform 2
         opp1 = self._calculate_arbitrage(
-            poly_market, kalshi_market, match_score,
-            poly_side="yes", kalshi_side="no"
+            poly_market, platform2_market, match_score,
+            poly_side="yes", platform2_side="no"
         )
         if opp1:
             opportunities.append(opp1)
         
-        # Strategy 2: NO on Polymarket, YES on Kalshi
+        # Strategy 2: NO on Polymarket, YES on Platform 2
         opp2 = self._calculate_arbitrage(
-            poly_market, kalshi_market, match_score,
-            poly_side="no", kalshi_side="yes"
+            poly_market, platform2_market, match_score,
+            poly_side="no", platform2_side="yes"
         )
         if opp2:
             opportunities.append(opp2)
@@ -82,29 +94,33 @@ class ArbitrageCalculator:
         
         return None
     
-    def _calculate_arbitrage(self, poly_market: Market, kalshi_market: Market,
+    def _calculate_arbitrage(self, poly_market: Market, platform2_market: Market,
                            match_score: float, poly_side: str, 
-                           kalshi_side: str) -> Optional[ArbitrageOpportunity]:
+                           platform2_side: str) -> Optional[ArbitrageOpportunity]:
         """
         Calculate arbitrage for a specific betting strategy.
         
         Args:
             poly_market: Polymarket market
-            kalshi_market: Kalshi market
+            platform2_market: Second platform market (PredictIt, Kalshi, etc.)
             match_score: Fuzzy match score
             poly_side: "yes" or "no" - which side to bet on Polymarket
-            kalshi_side: "yes" or "no" - which side to bet on Kalshi
+            platform2_side: "yes" or "no" - which side to bet on platform 2
             
         Returns:
             ArbitrageOpportunity if profitable, None otherwise
         """
-        # Get prices (Polymarket uses 0-1, Kalshi uses 0-1 after conversion)
+        # Get prices (both platforms use 0-1 after conversion)
         poly_price = poly_market.yes_price if poly_side == "yes" else poly_market.no_price
-        kalshi_price = kalshi_market.yes_price if kalshi_side == "yes" else kalshi_market.no_price
+        platform2_price = platform2_market.yes_price if platform2_side == "yes" else platform2_market.no_price
         
         # Check for invalid prices
-        if poly_price <= 0 or poly_price >= 1 or kalshi_price <= 0 or kalshi_price >= 1:
+        if poly_price <= 0 or poly_price >= 1 or platform2_price <= 0 or platform2_price >= 1:
             return None
+        
+        # Get fees for both platforms
+        poly_fee = self.polymarket_fee
+        platform2_fee = self._get_platform_fee(platform2_market.platform)
         
         # Calculate effective returns after fees
         # When you win a bet, payout = investment / price, profit = payout - investment
@@ -115,11 +131,11 @@ class ArbitrageCalculator:
         # Effective multiplier: 1 + (1/p - 1)*(1-f) = 1 + (1-p)*(1-f)/p
         
         # Simplified: effective return = (1 - fee) / price
-        poly_effective_return = (1 - self.polymarket_fee) / poly_price
-        kalshi_effective_return = (1 - self.kalshi_fee) / kalshi_price
+        poly_effective_return = (1 - poly_fee) / poly_price
+        platform2_effective_return = (1 - platform2_fee) / platform2_price
         
         # Arbitrage exists if combined returns > 1
-        combined_return = 1 / poly_effective_return + 1 / kalshi_effective_return
+        combined_return = 1 / poly_effective_return + 1 / platform2_effective_return
         
         if combined_return >= 1:
             # No arbitrage for this strategy
@@ -127,19 +143,19 @@ class ArbitrageCalculator:
         
         # Calculate optimal bet distribution
         # We want to allocate capital such that profit is equal in both outcomes
-        # Let x = amount bet on Polymarket, y = amount bet on Kalshi
+        # Let x = amount bet on Polymarket, y = amount bet on Platform 2
         # Total investment = x + y
         
         # Outcome 1: Polymarket side wins
         # Profit = x * poly_effective_return - (x + y) = x * (poly_effective_return - 1) - y
         
-        # Outcome 2: Kalshi side wins
-        # Profit = y * kalshi_effective_return - (x + y) = y * (kalshi_effective_return - 1) - x
+        # Outcome 2: Platform 2 side wins
+        # Profit = y * platform2_effective_return - (x + y) = y * (platform2_effective_return - 1) - x
         
         # For equal profit:
-        # x * (poly_effective_return - 1) - y = y * (kalshi_effective_return - 1) - x
-        # x * poly_effective_return = y * kalshi_effective_return
-        # x / y = kalshi_effective_return / poly_effective_return
+        # x * (poly_effective_return - 1) - y = y * (platform2_effective_return - 1) - x
+        # x * poly_effective_return = y * platform2_effective_return
+        # x / y = platform2_effective_return / poly_effective_return
         
         # Given a target minimum profit P, we need:
         # x * (poly_effective_return - 1) - y >= P
@@ -149,20 +165,20 @@ class ArbitrageCalculator:
         # Start with a base investment that aims for the minimum profit
         
         # For equal profits: ratio of bets
-        ratio = kalshi_effective_return / poly_effective_return
+        ratio = platform2_effective_return / poly_effective_return
         
-        # Let's say we bet $1 on Kalshi, then bet $ratio on Polymarket
+        # Let's say we bet $1 on Platform 2, then bet $ratio on Polymarket
         # Total investment = ratio + 1
         # Profit if Polymarket wins = ratio * poly_effective_return - (ratio + 1)
-        # Profit if Kalshi wins = 1 * kalshi_effective_return - (ratio + 1)
+        # Profit if Platform 2 wins = 1 * platform2_effective_return - (ratio + 1)
         
         # These should be equal:
         unit_profit_poly = ratio * poly_effective_return - (ratio + 1)
-        unit_profit_kalshi = kalshi_effective_return - (ratio + 1)
+        unit_profit_platform2 = platform2_effective_return - (ratio + 1)
         
         # The actual profit per dollar of total investment:
         unit_total_investment = ratio + 1
-        unit_profit = min(unit_profit_poly, unit_profit_kalshi)
+        unit_profit = min(unit_profit_poly, unit_profit_platform2)
         
         if unit_profit <= 0:
             return None
@@ -171,36 +187,40 @@ class ArbitrageCalculator:
         scale_factor = self.min_profit / unit_profit
         
         poly_bet = ratio * scale_factor
-        kalshi_bet = scale_factor
+        platform2_bet = scale_factor
         total_investment = unit_total_investment * scale_factor
         
         # Calculate actual profits for each outcome
         profit_if_poly_wins = poly_bet * poly_effective_return - total_investment
-        profit_if_kalshi_wins = kalshi_bet * kalshi_effective_return - total_investment
+        profit_if_platform2_wins = platform2_bet * platform2_effective_return - total_investment
         
         # Determine which outcome corresponds to YES/NO
-        if poly_side == "yes" and kalshi_side == "no":
+        if poly_side == "yes" and platform2_side == "no":
             profit_if_yes = profit_if_poly_wins
-            profit_if_no = profit_if_kalshi_wins
-        elif poly_side == "no" and kalshi_side == "yes":
-            profit_if_yes = profit_if_kalshi_wins
+            profit_if_no = profit_if_platform2_wins
+        elif poly_side == "no" and platform2_side == "yes":
+            profit_if_yes = profit_if_platform2_wins
             profit_if_no = profit_if_poly_wins
         else:
             # Shouldn't happen with our strategy, but handle it
-            profit_if_yes = min(profit_if_poly_wins, profit_if_kalshi_wins)
-            profit_if_no = min(profit_if_poly_wins, profit_if_kalshi_wins)
+            profit_if_yes = min(profit_if_poly_wins, profit_if_platform2_wins)
+            profit_if_no = min(profit_if_poly_wins, profit_if_platform2_wins)
         
         min_profit = min(profit_if_yes, profit_if_no)
         roi_percent = (min_profit / total_investment) * 100
         
+        # Determine platform 2 side label
+        platform2_name = platform2_market.platform
+        platform2_side_label = "predictit" if platform2_name == "predictit" else platform2_name
+        
         return ArbitrageOpportunity(
             polymarket_market=poly_market,
-            kalshi_market=kalshi_market,
+            kalshi_market=platform2_market,  # Using kalshi_market field for now (legacy)
             match_score=match_score,
             bet_polymarket_side=poly_side,
-            bet_kalshi_side=kalshi_side,
+            bet_kalshi_side=platform2_side,  # Using kalshi_side field for now (legacy)
             bet_polymarket_amount=poly_bet,
-            bet_kalshi_amount=kalshi_bet,
+            bet_kalshi_amount=platform2_bet,  # Using kalshi_amount field for now (legacy)
             total_investment=total_investment,
             profit_if_yes=profit_if_yes,
             profit_if_no=profit_if_no,
